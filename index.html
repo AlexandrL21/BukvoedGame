@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#2e2118" />
+  <title>Буквоед — образовательная игра</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">Б</div>
+        <div><h1>Буквоед</h1><p>Восстанови слова волшебной библиотеки</p></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="levelsBtn">☰ Уровни</button>
+        <button class="icon-btn" id="soundBtn">🔊</button>
+        <button class="icon-btn" id="pauseBtn">Ⅱ</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="game-card">
+        <div class="scene-head">
+          <div><div class="eyebrow" id="zoneLabel">Главный книжный зал</div><div class="level-title">Уровень <span id="levelNumber">1</span></div></div>
+          <div class="stars" id="levelStars">☆☆☆</div>
+        </div>
+
+        <div class="clue-card">
+          <div class="owl">🦉</div>
+          <div><div class="clue-label" id="categoryLabel">Слово по определению</div><div class="clue-text" id="clueText">Загрузка задания…</div></div>
+        </div>
+
+        <div class="word-wrap">
+          <div class="word-label">Собери слово</div>
+          <div class="word" id="wordDisplay"></div>
+        </div>
+
+        <div class="board-wrap">
+          <canvas id="gameCanvas" width="720" height="720"></canvas>
+          <div class="center-overlay hidden" id="pauseOverlay">
+            <div class="overlay-card compact"><div class="overlay-icon">⏸</div><h2>Пауза</h2><p>Нажми «Продолжить», когда будешь готов.</p><button class="primary-btn" id="resumeBtn">Продолжить</button></div>
+          </div>
+        </div>
+
+        <div class="mobile-controls">
+          <button class="move-btn up" data-dir="up">▲</button>
+          <button class="move-btn left" data-dir="left">◀</button>
+          <button class="move-btn down" data-dir="down">▼</button>
+          <button class="move-btn right" data-dir="right">▶</button>
+        </div>
+      </section>
+
+      <aside class="side-card">
+        <section class="stats-panel">
+          <div class="stat"><span class="stat-label">Жизни</span><strong id="livesDisplay">❤❤❤</strong></div>
+          <div class="stat"><span class="stat-label">Очки</span><strong id="scoreDisplay">0</strong></div>
+          <div class="stat"><span class="stat-label">Ошибки</span><strong id="errorsDisplay">0</strong></div>
+        </section>
+
+        <section><div class="section-title">Способности</div><div class="power-list">
+          <button class="power-btn" id="hintBtn"><span class="power-icon">💡</span><span><strong>Подсказка</strong><small id="hintText">1 раз за уровень</small></span></button>
+          <div class="power-btn passive" id="eraserCard"><span class="power-icon">🧽</span><span><strong>Ластик</strong><small id="eraserText">Готов спасти от ошибки</small></span></div>
+        </div></section>
+
+        <section class="progress-panel"><div class="section-title">Восстановление библиотеки</div><div class="progress-track"><div id="progressFill" class="progress-fill"></div></div><div class="progress-meta"><span id="progressText">0 из 20 уровней</span><span id="zoneProgress">Зал 1/4</span></div></section>
+
+        <section class="rules-panel"><div class="section-title">Как играть</div><p>Управляй Буквоедом стрелками или WASD и собирай буквы строго по порядку.</p><div class="legend"><span><i class="legend-dot false"></i> карточки с буквами</span><span><i class="legend-dot obstacle"></i> препятствия</span><span><i class="legend-dot correct"></i> подсветка при подсказке</span></div></section>
+        <div class="tip" id="statusText">Найди первую букву слова.</div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="introModal">
+    <div class="modal story-modal quake">
+      <div class="story-art"><div class="shelf shelf-a">📚📚📚</div><div class="shelf shelf-b">📚📚</div><div class="story-owl">🦉</div><div class="story-worm">●●●◉</div><div class="falling-letter l1">Б</div><div class="falling-letter l2">У</div><div class="falling-letter l3">К</div><div class="falling-letter l4">В</div><div class="falling-letter l5">А</div></div>
+
+      <div class="eyebrow">Об игре</div>
+      <h2>Буквоед</h2>
+      <p><strong>«Буквоед»</strong> — образовательная игра по русскому языку с механикой классической «Змейки». Управляй книжным червячком и собирай буквы загаданного слова строго по порядку.</p>
+
+      <div class="story-info-grid">
+        <div class="story-info-card">
+          <strong>📖 Сюжет</strong>
+          <span>После землетрясения книги упали с полок, а слова рассыпались на отдельные буквы. Помоги Филину-библиотекарю восстановить библиотеку.</span>
+        </div>
+        <div class="story-info-card">
+          <strong>⌨️ Управление</strong>
+          <span>Стрелки или WASD. Избегай препятствий, неправильных букв и собственного хвоста.</span>
+        </div>
+      </div>
+
+      <div class="story-actions">
+        <button class="primary-btn" id="startBtn">Начать восстановление</button>
+        <button class="secondary-btn" id="introLevelsBtn">Выбрать уровень</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="levelModal"><div class="modal levels-modal"><div class="modal-head"><div><div class="eyebrow">Карта библиотеки</div><h2>Выбор уровня</h2></div><button class="close-btn" id="closeLevelsBtn">×</button></div><div class="level-grid" id="levelGrid"></div></div></div>
+
+  <div class="modal-backdrop hidden" id="resultModal"><div class="modal result-modal"><div class="result-emoji" id="resultEmoji">✨</div><div class="eyebrow" id="resultEyebrow">Слово восстановлено</div><h2 id="resultTitle">Отлично!</h2><div class="result-word" id="resultWord"></div><div class="result-stars" id="resultStars">★★★</div><p id="resultText"></p><div class="result-actions"><button class="secondary-btn" id="replayBtn">Повторить</button><button class="primary-btn" id="nextLevelBtn">Следующий уровень</button></div></div></div>
+
+  <div class="toast" id="toast"></div>
+  <script src="game.js"></script>
+</body>
+</html>
