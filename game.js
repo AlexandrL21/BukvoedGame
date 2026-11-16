@@ -1,6 +1,10 @@
 (() => {
   "use strict";
 
+  const APP_VERSION = "1.0.1";
+  const REPO_URL = "https://github.com/alexandrl21/BukvoedGame";
+  const STATS_KEY = "bukvoed-stats-v1";
+
   const LEVELS = [
     {word:"КОТ",clue:"Домашнее животное, которое ловит мышей.",category:"Слово по определению",zone:"Главный книжный зал",size:12,speed:390,distractors:2,obstacles:4},
     {word:"ДОМ",clue:"Здание, в котором живут люди.",category:"Слово по определению",zone:"Главный книжный зал",size:12,speed:380,distractors:2,obstacles:5},
@@ -29,19 +33,45 @@
   const ctx = canvas.getContext("2d");
   const ui = {
     zone:$("zoneLabel"),level:$("levelNumber"),stars:$("levelStars"),category:$("categoryLabel"),clue:$("clueText"),word:$("wordDisplay"),
-    lives:$("livesDisplay"),score:$("scoreDisplay"),errors:$("errorsDisplay"),hint:$("hintBtn"),hintText:$("hintText"),eraser:$("eraserCard"),eraserText:$("eraserText"),
-    progress:$("progressFill"),progressText:$("progressText"),zoneProgress:$("zoneProgress"),status:$("statusText"),pauseOverlay:$("pauseOverlay"),
-    intro:$("introModal"),levelModal:$("levelModal"),levelGrid:$("levelGrid"),result:$("resultModal"),resultEmoji:$("resultEmoji"),resultEyebrow:$("resultEyebrow"),
-    resultTitle:$("resultTitle"),resultWord:$("resultWord"),resultStars:$("resultStars"),resultText:$("resultText"),next:$("nextLevelBtn"),sound:$("soundBtn"),pause:$("pauseBtn"),toast:$("toast")
+    lives:$("livesDisplay"),score:$("scoreDisplay"),errors:$("errorsDisplay"),letters:$("lettersDisplay"),livesStat:$("livesStat"),scoreStat:$("scoreStat"),errorsStat:$("errorsStat"),lettersStat:$("lettersStat"),hint:$("hintBtn"),hintText:$("hintText"),hintCount:$("hintCount"),eraser:$("eraserCard"),eraserText:$("eraserText"),eraserCount:$("eraserCount"),
+    progress:$("progressFill"),progressText:$("progressText"),zoneProgress:$("zoneProgress"),status:$("statusText"),statusCopy:$("statusCopy"),pauseOverlay:$("pauseOverlay"),
+    intro:$("introModal"),levelModal:$("levelModal"),levelGrid:$("levelGrid"),helpModal:$("helpModal"),settingsModal:$("settingsModal"),statsModal:$("statsModal"),feedbackModal:$("feedbackModal"),result:$("resultModal"),resultEmoji:$("resultEmoji"),resultEyebrow:$("resultEyebrow"),
+    resultTitle:$("resultTitle"),resultWord:$("resultWord"),resultStars:$("resultStars"),resultScore:$("resultScore"),resultErrors:$("resultErrors"),resultLives:$("resultLives"),resultText:$("resultText"),next:$("nextLevelBtn"),sound:$("soundBtn"),pause:$("pauseBtn"),toast:$("toast")
   };
   const SAVE_KEY = "bukvoed-save-v1";
-  const state = {levelIndex:0,level:LEVELS[0],snake:[],direction:{x:1,y:0},nextDirection:{x:1,y:0},letters:[],obstacles:[],collected:0,lives:3,errors:0,score:0,hintAvailable:true,hintUntil:0,eraserAvailable:true,started:false,paused:false,finished:false,resultWon:false,timer:null,muted:false,animType:"",animStart:0,animUntil:0,save:loadSave()};
+  const state = {levelIndex:0,level:LEVELS[0],snake:[],direction:{x:1,y:0},nextDirection:{x:1,y:0},letters:[],obstacles:[],collected:0,lives:3,errors:0,score:0,hintAvailable:true,hintUntil:0,eraserAvailable:true,started:false,paused:false,finished:false,resultWon:false,timer:null,muted:false,animType:"",animStart:0,animUntil:0,menuFromGame:false,overlayResume:false,levelModalResume:false,autoPaused:false,canvasSize:720,lastRender:0,runTracked:false,selectedRating:0,save:loadSave(),stats:loadStats()};
 
   function loadSave(){
-    try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"{}");return{unlocked:Math.max(1,Math.min(LEVELS.length,d.unlocked||1)),stars:d.stars||{},bestScores:d.bestScores||{},introSeen:!!d.introSeen};}
-    catch{return{unlocked:1,stars:{},bestScores:{},introSeen:false};}
+    try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"{}");return{unlocked:Math.max(1,Math.min(LEVELS.length,d.unlocked||1)),stars:d.stars||{},bestScores:d.bestScores||{},introSeen:!!d.introSeen,muted:!!d.muted,reducedMotion:!!d.reducedMotion};}
+    catch{return{unlocked:1,stars:{},bestScores:{},introSeen:false,muted:false,reducedMotion:false};}
   }
   function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state.save));}catch{}}
+  function defaultStats(){return{sessions:0,levelStarts:0,wins:0,losses:0,totalErrors:0,hintsUsed:0,erasersUsed:0,feedbackPrepared:0,totalPlayMs:0,lastVersion:APP_VERSION,lastSeen:""};}
+  function loadStats(){try{return{...defaultStats(),...JSON.parse(localStorage.getItem(STATS_KEY)||"{}")};}catch{return defaultStats();}}
+  function persistStats(){try{localStorage.setItem(STATS_KEY,JSON.stringify(state.stats));}catch{}}
+  let lastPlayFlush=Date.now();
+  function flushPlayTime(){const now=Date.now();if(!document.hidden&&lastPlayFlush){state.stats.totalPlayMs+=Math.max(0,now-lastPlayFlush);}lastPlayFlush=now;state.stats.lastSeen=new Date().toISOString();state.stats.lastVersion=APP_VERSION;persistStats();}
+  function track(name,amount=1){if(!(name in state.stats))state.stats[name]=0;state.stats[name]+=amount;state.stats.lastSeen=new Date().toISOString();state.stats.lastVersion=APP_VERSION;persistStats();}
+  function formatPlayTime(ms){const min=Math.max(0,Math.round(ms/60000));if(min<60)return `${min} мин`;const h=Math.floor(min/60),m=min%60;return `${h} ч ${m} мин`;}
+  function refreshStatsModal(){
+    flushPlayTime();const s=state.stats,finished=s.wins+s.losses,rate=finished?Math.round(s.wins/finished*100):0;
+    $("mSessions").textContent=s.sessions;$("mStarts").textContent=s.levelStarts;$("mWins").textContent=s.wins;$("mLosses").textContent=s.losses;$("mWinRate").textContent=`${rate}%`;$("mErrors").textContent=s.totalErrors;$("mHints").textContent=s.hintsUsed;$("mErasers").textContent=s.erasersUsed;$("mPlayTime").textContent=formatPlayTime(s.totalPlayMs);$("mVersion").textContent=`Версия ${APP_VERSION}`;
+  }
+  function resetLocalStats(){state.stats=defaultStats();state.stats.sessions=1;lastPlayFlush=Date.now();persistStats();refreshStatsModal();}
+  function deviceLabel(){const coarse=matchMedia("(pointer:coarse)").matches;const w=Math.round(window.innerWidth);return `${coarse?"сенсорное":"клавиатура/мышь"}, ${w}px`;}
+  function feedbackText(){const cat=$("feedbackCategory").value,comment=$("feedbackText").value.trim()||"Комментарий не указан",rating=state.selectedRating?`${state.selectedRating}/5`:"не указана";return `## Отзыв по игре «Буквоед»\n\n**Версия:** ${APP_VERSION}\n**Категория:** ${cat}\n**Оценка:** ${rating}\n**Устройство:** ${deviceLabel()}\n**Уровень:** ${state.levelIndex+1}\n\n### Комментарий\n${comment}`;}
+  async function copyFeedback(){const text=feedbackText();try{await navigator.clipboard.writeText(text);$("feedbackStatus").textContent="Отзыв скопирован в буфер обмена.";}catch{$("feedbackStatus").textContent="Не удалось скопировать автоматически — используйте GitHub Issues.";}track("feedbackPrepared");}
+  function openGithubFeedback(){const title=`[Отзыв] ${$("feedbackCategory").value} — v${APP_VERSION}`,body=feedbackText(),url=`${REPO_URL}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;track("feedbackPrepared");window.open(url,"_blank","noopener");$("feedbackStatus").textContent="Открыта форма нового GitHub Issue.";}
+  function pulse(el,cls="ui-bump",duration=460){if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),duration);}
+  function syncSettingsUI(){
+    state.muted=!!state.save.muted;
+    document.body.classList.toggle("reduced-motion",!!state.save.reducedMotion);
+    ui.sound.textContent=state.muted?"🔇":"🔊";
+    $("soundToggleText").textContent=state.muted?"Выкл.":"Вкл.";
+    $("soundToggleText").classList.toggle("off",state.muted);
+    $("motionToggleText").textContent=state.save.reducedMotion?"Выкл.":"Вкл.";
+    $("motionToggleText").classList.toggle("off",!!state.save.reducedMotion);
+  }
   function key(p){return `${p.x},${p.y}`;} function eq(a,b){return a.x===b.x&&a.y===b.y;}
   function seededRandom(seed){let t=seed+0x6D2B79F5;return()=>{t+=0x6D2B79F5;let r=t;r=Math.imul(r^r>>>15,r|1);r^=r+Math.imul(r^r>>>7,r|61);return((r^r>>>14)>>>0)/4294967296;};}
 
@@ -49,8 +79,8 @@
     stopLoop();
     index = Math.max(0, Math.min(index, state.save.unlocked - 1, LEVELS.length - 1));
     state.levelIndex=index; state.level=LEVELS[index]; state.collected=0; state.lives=3; state.errors=0; state.score=0;
-    state.hintAvailable=true; state.hintUntil=0; state.eraserAvailable=true; state.started=false; state.paused=false; state.finished=false; state.resultWon=false; state.animType=""; state.animStart=0; state.animUntil=0;
-    state.direction={x:1,y:0}; state.nextDirection={x:1,y:0}; buildObstacles(); resetSnake(); spawnLetters(); refreshUI(); draw(); ui.pauseOverlay.classList.add("hidden"); setStatus("Найди первую букву слова.");
+    state.hintAvailable=true; state.hintUntil=0; state.eraserAvailable=true; state.runTracked=false; state.started=false; state.paused=false; state.finished=false; state.resultWon=false; state.animType=""; state.animStart=0; state.animUntil=0;
+    state.direction={x:1,y:0}; state.nextDirection={x:1,y:0}; buildObstacles(); resetSnake(); spawnLetters(); refreshUI(); buildLevelGrid(); draw(); ui.pauseOverlay.classList.add("hidden"); setStatus("Найди первую букву слова.");
   }
 
   function resetSnake(){
@@ -67,12 +97,12 @@
 
   function largestFreeComponent(blocked,size){
     const seen=new Set();let best=0;
-    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const k=`${x},${y}`;if(blocked.has(k)||seen.has(k))continue;let count=0,q=[{x,y}];seen.add(k);while(q.length){const p=q.shift();count++;for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){const n={x:p.x+d.x,y:p.y+d.y},nk=key(n);if(n.x<0||n.y<0||n.x>=size||n.y>=size||blocked.has(nk)||seen.has(nk))continue;seen.add(nk);q.push(n);}}best=Math.max(best,count);}return best;
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const k=`${x},${y}`;if(blocked.has(k)||seen.has(k))continue;let count=0,q=[{x,y}],qi=0;seen.add(k);while(qi<q.length){const p=q[qi++];count++;for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){const n={x:p.x+d.x,y:p.y+d.y},nk=key(n);if(n.x<0||n.y<0||n.x>=size||n.y>=size||blocked.has(nk)||seen.has(nk))continue;seen.add(nk);q.push(n);}}best=Math.max(best,count);}return best;
   }
 
   function reachableCells(){
     const size=state.level.size, blocked=new Set(state.obstacles.map(key));state.snake.slice(1).forEach(p=>blocked.add(key(p)));
-    const start=state.snake[0],q=[start],seen=new Set([key(start)]),out=[];while(q.length){const p=q.shift();for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){const n={x:p.x+d.x,y:p.y+d.y},nk=key(n);if(n.x<0||n.y<0||n.x>=size||n.y>=size||blocked.has(nk)||seen.has(nk))continue;seen.add(nk);q.push(n);out.push(n);}}return out;
+    const start=state.snake[0],q=[start],seen=new Set([key(start)]),out=[];let qi=0;while(qi<q.length){const p=q[qi++];for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){const n={x:p.x+d.x,y:p.y+d.y},nk=key(n);if(n.x<0||n.y<0||n.x>=size||n.y>=size||blocked.has(nk)||seen.has(nk))continue;seen.add(nk);q.push(n);out.push(n);}}return out;
   }
 
   function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -83,7 +113,25 @@
     state.letters.push({...available.shift(),char:needed,correct:true});const count=Math.min(state.level.distractors,available.length),used=new Set([needed]);for(let i=0;i<count;i++){const ch=randomDistractor(used);used.add(ch);state.letters.push({...available.shift(),char:ch,correct:false});}
   }
 
-  function setDirection(x,y){if(state.finished||state.paused)return;if(state.direction.x+x===0&&state.direction.y+y===0)return;if(!state.started){state.started=true;startLoop();}state.nextDirection={x,y};}
+  function hasBlockingOverlay(){
+    return !ui.intro.classList.contains("hidden") || !ui.levelModal.classList.contains("hidden") || !ui.helpModal.classList.contains("hidden") || !ui.settingsModal.classList.contains("hidden") || !ui.statsModal.classList.contains("hidden") || !ui.feedbackModal.classList.contains("hidden") || !ui.result.classList.contains("hidden");
+  }
+
+  function resizeCanvas(){
+    const rect=canvas.getBoundingClientRect();
+    const cssSize=Math.max(280,Math.round(rect.width||720));
+    const dpr=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+    const physical=Math.round(cssSize*dpr);
+    if(canvas.width!==physical||canvas.height!==physical){
+      canvas.width=physical;canvas.height=physical;
+    }
+    canvas.style.height=`${cssSize}px`;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    state.canvasSize=cssSize;
+    draw();
+  }
+
+  function setDirection(x,y){if(state.finished||state.paused||hasBlockingOverlay())return;if(state.direction.x+x===0&&state.direction.y+y===0)return;if(!state.started){state.started=true;if(!state.runTracked){state.runTracked=true;track("levelStarts");}startLoop();}state.nextDirection={x,y};}
   function tick(){
     if(state.paused||state.finished||!state.started)return;state.direction=state.nextDirection;const h=state.snake[0],next={x:h.x+state.direction.x,y:h.y+state.direction.y};
     if(isCollision(next)){loseLife("Столкновение! Буквоед возвращается на безопасное место.");return;}
@@ -110,15 +158,19 @@
     }
     spawnLetters();
     refreshUI();
+    pulse(ui.scoreStat);pulse(ui.lettersStat);const cells=ui.word.querySelectorAll(".word-cell");if(cells[state.collected-1])pulse(cells[state.collected-1],"just-filled",430);
     setStatus(`Верно. Теперь найди букву «${state.level.word[state.collected]}».`);
   }
 
   function collectWrong(letter){
     state.errors++;
+    track("totalErrors");
     triggerAnimation("error",480);
     beep(170,.09);
+    const savedByEraser=state.eraserAvailable;
     if(state.eraserAvailable){
       state.eraserAvailable=false;
+      track("erasersUsed");
       toast(`Ластик спас жизнь: «${letter.char}» не подходит`);
       setStatus("Ластик сработал автоматически. Нужная буква не изменилась.");
     }else{
@@ -129,15 +181,19 @@
     state.letters=state.letters.filter(l=>l!==letter);
     if(!state.letters.some(l=>l.char===state.level.word[state.collected])||state.letters.length<2)spawnLetters();
     refreshUI();
+    pulse(ui.errorsStat,"ui-loss");
+    if(savedByEraser)pulse(ui.eraser,"flash",560);else pulse(ui.livesStat,"ui-loss");
     if(state.lives<=0)loseLevel();
   }
 
   function loseLife(message){
     state.errors++;
+    track("totalErrors");
     state.lives--;
     triggerAnimation("error",520);
     beep(130,.12);
     refreshUI();
+    pulse(ui.livesStat,"ui-loss");pulse(ui.errorsStat,"ui-loss");
     if(state.lives<=0){
       loseLevel();
       return;
@@ -150,9 +206,10 @@
     toast("Потеряна жизнь");
   }
 
-  function useHint(){if(!state.hintAvailable||state.finished)return;state.hintAvailable=false;state.hintUntil=performance.now()+3200;refreshUI();setStatus(`Подсказка: ищи букву «${state.level.word[state.collected]}».`);beep(800,.07);}
+  function useHint(){if(!state.hintAvailable||state.finished)return;state.hintAvailable=false;track("hintsUsed");state.hintUntil=performance.now()+3200;refreshUI();pulse(ui.hint,"flash",560);setStatus(`Подсказка: ищи букву «${state.level.word[state.collected]}».`);beep(800,.07);}
 
   function winLevel(){
+    track("wins");
     state.finished=true;
     state.resultWon=true;
     stopLoop();
@@ -172,6 +229,7 @@
   }
 
   function loseLevel(){
+    track("losses");
     state.finished=true;
     state.resultWon=false;
     stopLoop();
@@ -182,7 +240,7 @@
   function showResult(won,stars){
     state.resultWon = won;
     ui.next.hidden = !won;
-    ui.result.classList.remove("hidden");ui.resultEmoji.textContent=won?"✨":"📚";ui.resultEyebrow.textContent=won?"Слово восстановлено":"Попробуем ещё раз";ui.resultTitle.textContent=won?"Отличная работа!":"Буквы снова рассыпались";ui.resultWord.textContent=won?state.level.word:state.level.word.slice(0,state.collected)+"…";ui.resultStars.textContent=won?"★".repeat(stars)+"☆".repeat(3-stars):"☆☆☆";ui.resultText.textContent=won?`Ты восстановил слово и получил ${state.score} очков. Ошибок: ${state.errors}.`:`Жизни закончились. Собрано букв: ${state.collected} из ${state.level.word.length}.`;ui.next.textContent=state.levelIndex===LEVELS.length-1?"К карте уровней":"Следующий уровень";
+    ui.result.classList.remove("hidden");ui.resultEmoji.textContent=won?"✨":"📚";ui.resultEyebrow.textContent=won?"Слово восстановлено":"Попробуем ещё раз";ui.resultTitle.textContent=won?"Отличная работа!":"Буквы снова рассыпались";ui.resultWord.textContent=won?state.level.word:state.level.word.slice(0,state.collected)+"…";ui.resultStars.textContent=won?"★".repeat(stars)+"☆".repeat(3-stars):"☆☆☆";ui.resultScore.textContent=state.score;ui.resultErrors.textContent=state.errors;ui.resultLives.textContent=state.lives;ui.resultText.textContent=won?"Уровень завершён. Результат сохранён в карте библиотеки.":`Жизни закончились. Собрано букв: ${state.collected} из ${state.level.word.length}.`;ui.next.textContent=state.levelIndex===LEVELS.length-1?"К карте уровней":"Следующий уровень";
   }
 
   function togglePause(force){if(state.finished)return;state.paused=typeof force==="boolean"?force:!state.paused;ui.pauseOverlay.classList.toggle("hidden",!state.paused);ui.pause.textContent=state.paused?"▶":"Ⅱ";if(state.paused)stopLoop();else if(state.started)startLoop();}
@@ -190,14 +248,28 @@
 
   function refreshUI(){
     const l=state.level;ui.zone.textContent=l.zone;ui.level.textContent=state.levelIndex+1;ui.category.textContent=l.category;ui.clue.textContent=l.clue;ui.word.innerHTML="";[...l.word].forEach((ch,i)=>{const c=document.createElement("span");c.className="word-cell"+(i<state.collected?" filled":"");c.textContent=i<state.collected?ch:"";ui.word.appendChild(c);});
-    ui.lives.textContent="❤".repeat(Math.max(0,state.lives))+"♡".repeat(Math.max(0,3-state.lives));ui.score.textContent=state.score;ui.errors.textContent=state.errors;ui.hint.disabled=!state.hintAvailable;ui.hintText.textContent=state.hintAvailable?"1 раз за уровень":"Использована";ui.eraser.classList.toggle("used",!state.eraserAvailable);ui.eraserText.textContent=state.eraserAvailable?"Готов спасти от ошибки":"Уже использован";
-    const completed=Object.keys(state.save.stars).filter(k=>state.save.stars[k]>0).length;ui.progress.style.width=`${completed/LEVELS.length*100}%`;ui.progressText.textContent=`${completed} из ${LEVELS.length} уровней`;ui.zoneProgress.textContent=`Зал ${Math.floor(state.levelIndex/5)+1}/4`;const best=state.save.stars[String(state.levelIndex)]||0;ui.stars.textContent="★".repeat(best)+"☆".repeat(3-best);buildLevelGrid();
+    ui.lives.textContent="❤".repeat(Math.max(0,state.lives))+"♡".repeat(Math.max(0,3-state.lives));ui.score.textContent=state.score;ui.errors.textContent=state.errors;ui.letters.textContent=`${state.collected}/${l.word.length}`;ui.hint.disabled=!state.hintAvailable;ui.hintText.textContent=state.hintAvailable?"1 раз за уровень":"Использована";ui.hintCount.textContent=state.hintAvailable?"×1":"×0";ui.eraser.classList.toggle("used",!state.eraserAvailable);ui.eraserText.textContent=state.eraserAvailable?"Готов спасти от ошибки":"Уже использован";ui.eraserCount.textContent=state.eraserAvailable?"×1":"×0";
+    const completed=Object.keys(state.save.stars).filter(k=>state.save.stars[k]>0).length;ui.progress.style.width=`${completed/LEVELS.length*100}%`;ui.progressText.textContent=`${completed} из ${LEVELS.length} уровней`;ui.zoneProgress.textContent=`Зал ${Math.floor(state.levelIndex/5)+1}/4`;const best=state.save.stars[String(state.levelIndex)]||0;ui.stars.textContent="★".repeat(best)+"☆".repeat(3-best);
   }
-  function buildLevelGrid(){ui.levelGrid.innerHTML="";LEVELS.forEach((lvl,i)=>{const b=document.createElement("button"),unlocked=i<state.save.unlocked,stars=state.save.stars[String(i)]||0;b.className="level-btn"+(!unlocked?" locked":"")+(i===state.levelIndex?" current":"");b.disabled=!unlocked;b.innerHTML=`<span>${i+1}</span><small>${unlocked?"★".repeat(stars)+"☆".repeat(3-stars):"🔒"}</small>`;b.onclick=()=>{if(!unlocked)return;ui.levelModal.classList.add("hidden");resetLevel(i);};ui.levelGrid.appendChild(b);});}
-  function setStatus(t){ui.status.textContent=t;} function toast(t){ui.toast.textContent=t;ui.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>ui.toast.classList.remove("show"),1500);}
+  function buildLevelGrid(){
+    ui.levelGrid.innerHTML="";
+    for(let z=0;z<4;z++){
+      const start=z*5,end=Math.min(start+5,LEVELS.length),group=document.createElement("section"),buttons=document.createElement("div"),head=document.createElement("div");
+      group.className="zone-level-group";buttons.className="zone-level-buttons";head.className="zone-level-head";
+      const completed=[...Array(end-start)].filter((_,n)=>(state.save.stars[String(start+n)]||0)>0).length;
+      head.innerHTML=`<strong>${LEVELS[start].zone}</strong><span>${completed}/${end-start} пройдено</span>`;
+      for(let i=start;i<end;i++){
+        const b=document.createElement("button"),unlocked=i<state.save.unlocked,stars=state.save.stars[String(i)]||0;
+        b.className="level-btn"+(!unlocked?" locked":"")+(i===state.levelIndex?" current":"");b.disabled=!unlocked;b.innerHTML=`<span>${i+1}</span><small>${unlocked?"★".repeat(stars)+"☆".repeat(3-stars):"🔒"}</small>`;
+        b.onclick=()=>{if(!unlocked)return;ui.levelModal.classList.add("hidden");state.menuFromGame=false;resetLevel(i);};buttons.appendChild(b);
+      }
+      group.append(head,buttons);ui.levelGrid.appendChild(group);
+    }
+  }
+  function setStatus(t){ui.statusCopy.textContent=t;pulse(ui.status,"status-pop",330);} function toast(t){ui.toast.textContent=t;ui.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>ui.toast.classList.remove("show"),1500);}
 
   function draw(){
-    const {size,zone}=state.level,w=canvas.width,cell=w/size,now=performance.now();
+    const {size,zone}=state.level,w=state.canvasSize||720,cell=w/size,now=performance.now();
     const zoneIndex=Math.floor(state.levelIndex/5);
     const localLevel=state.levelIndex%5;
     const palettes=[
@@ -562,12 +634,34 @@
   function roundRect(x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
   let audioCtx=null;function beep(freq=440,duration=.06){if(state.muted)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type="sine";o.frequency.value=freq;g.gain.setValueAtTime(.045,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+duration);}catch{}}
-  function openLevels(){if(!state.finished)togglePause(true);buildLevelGrid();ui.levelModal.classList.remove("hidden");}function closeLevels(){ui.levelModal.classList.add("hidden");if(!state.finished)togglePause(false);}
-  function handleKey(e){const code=e.code,map={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};if(map[code]){e.preventDefault();setDirection(...map[code]);}else if(code==="Space"){e.preventDefault();togglePause();}}
+  function showMainMenu(fromGame=false){
+    state.menuFromGame=fromGame;
+    if(fromGame&&!state.finished)togglePause(true);
+    $("startBtn").textContent=fromGame?"Продолжить игру":((state.save.unlocked>1)?`Продолжить — уровень ${state.save.unlocked}`:"Начать восстановление");
+    ui.intro.classList.remove("hidden");
+  }
+  function openInfoModal(modal){state.overlayResume=!state.finished&&!state.paused&&ui.intro.classList.contains("hidden");if(state.overlayResume)togglePause(true);modal.classList.remove("hidden");}
+  function closeInfoModal(modal){modal.classList.add("hidden");if(state.overlayResume&&!state.finished){state.overlayResume=false;togglePause(false);}}
+  function openLevels(){state.levelModalResume=!state.finished&&!state.paused&&ui.intro.classList.contains("hidden");if(state.levelModalResume)togglePause(true);buildLevelGrid();ui.levelModal.classList.remove("hidden");}
+  function closeLevels(){ui.levelModal.classList.add("hidden");if(state.levelModalResume&&!state.finished){state.levelModalResume=false;togglePause(false);}}
+  function handleKey(e){
+    const code=e.code,map={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};
+    if(map[code]){if(hasBlockingOverlay())return;e.preventDefault();setDirection(...map[code]);return;}
+    if(code==="Space"){if(hasBlockingOverlay())return;e.preventDefault();togglePause();return;}
+    if(code==="Escape"){
+      if(!ui.helpModal.classList.contains("hidden")){closeInfoModal(ui.helpModal);return;}
+      if(!ui.settingsModal.classList.contains("hidden")){closeInfoModal(ui.settingsModal);return;}
+      if(!ui.statsModal.classList.contains("hidden")){closeInfoModal(ui.statsModal);return;}
+      if(!ui.feedbackModal.classList.contains("hidden")){closeInfoModal(ui.feedbackModal);return;}
+      if(!ui.levelModal.classList.contains("hidden")){closeLevels();return;}
+      if(ui.intro.classList.contains("hidden")&&ui.result.classList.contains("hidden"))togglePause();
+    }
+  }
 
   document.addEventListener("keydown",handleKey);document.querySelectorAll("[data-dir]").forEach(b=>b.addEventListener("pointerdown",()=>{const d=b.dataset.dir;if(d==="up")setDirection(0,-1);if(d==="down")setDirection(0,1);if(d==="left")setDirection(-1,0);if(d==="right")setDirection(1,0);}));
   $("startBtn").onclick=()=>{
     ui.intro.classList.add("hidden");
+    if(state.menuFromGame){state.menuFromGame=false;if(state.paused)togglePause(false);return;}
     const continueLevel=Math.max(0,Math.min(LEVELS.length-1,state.save.unlocked-1));
     resetLevel(continueLevel);
   };
@@ -575,15 +669,43 @@
     ui.intro.classList.add("hidden");
     buildLevelGrid();
     ui.levelModal.classList.remove("hidden");
-  };$("levelsBtn").onclick=openLevels;$("closeLevelsBtn").onclick=closeLevels;$("pauseBtn").onclick=()=>togglePause();$("resumeBtn").onclick=()=>togglePause(false);ui.hint.onclick=useHint;ui.sound.onclick=()=>{state.muted=!state.muted;ui.sound.textContent=state.muted?"🔇":"🔊";};
-  $("replayBtn").onclick=()=>{ui.result.classList.add("hidden");resetLevel(state.levelIndex);};ui.next.onclick=()=>{if(!state.resultWon)return;ui.result.classList.add("hidden");if(state.levelIndex<LEVELS.length-1)resetLevel(state.levelIndex+1);else openLevels();};ui.levelModal.addEventListener("click",e=>{if(e.target===ui.levelModal)closeLevels();});window.addEventListener("resize",draw);
+  };
+  $("menuBtn").onclick=()=>showMainMenu(true);
+  $("levelsBtn").onclick=openLevels;$("closeLevelsBtn").onclick=closeLevels;$("pauseBtn").onclick=()=>togglePause();$("resumeBtn").onclick=()=>togglePause(false);$("restartBtn").onclick=()=>{ui.pauseOverlay.classList.add("hidden");resetLevel(state.levelIndex);};$("pauseMenuBtn").onclick=()=>showMainMenu(true);ui.hint.onclick=useHint;
+  function toggleSound(){state.save.muted=!state.save.muted;persist();syncSettingsUI();pulse(ui.sound);}
+  function toggleMotion(){state.save.reducedMotion=!state.save.reducedMotion;persist();syncSettingsUI();}
+  ui.sound.onclick=toggleSound;$("settingsSoundBtn").onclick=toggleSound;$("motionBtn").onclick=toggleMotion;
+  $("helpBtn").onclick=()=>openInfoModal(ui.helpModal);
+  $("sideHelpBtn").onclick=()=>openInfoModal(ui.helpModal);
+  $("introHelpBtn").onclick=()=>openInfoModal(ui.helpModal);
+  $("settingsBtn").onclick=()=>openInfoModal(ui.settingsModal);
+  $("introSettingsBtn").onclick=()=>openInfoModal(ui.settingsModal);
+  $("introStatsBtn").onclick=()=>{refreshStatsModal();openInfoModal(ui.statsModal);};
+  $("introFeedbackBtn").onclick=()=>{$("feedbackDevice").textContent=`Устройство: ${deviceLabel()}`;openInfoModal(ui.feedbackModal);};
+  $("closeStatsBtn").onclick=()=>closeInfoModal(ui.statsModal);$("closeFeedbackBtn").onclick=()=>closeInfoModal(ui.feedbackModal);
+  $("resetStatsBtn").onclick=()=>{if(confirm("Сбросить локальную статистику этой игры на устройстве?"))resetLocalStats();};
+  document.querySelectorAll("#ratingRow [data-rating]").forEach(b=>b.onclick=()=>{state.selectedRating=Number(b.dataset.rating);document.querySelectorAll("#ratingRow [data-rating]").forEach(x=>x.classList.toggle("active",x===b));});
+  $("copyFeedbackBtn").onclick=copyFeedback;$("githubFeedbackBtn").onclick=openGithubFeedback;
+  $("closeHelpBtn").onclick=()=>closeInfoModal(ui.helpModal);$("helpOkBtn").onclick=()=>closeInfoModal(ui.helpModal);$("closeSettingsBtn").onclick=()=>closeInfoModal(ui.settingsModal);
+  $("replayBtn").onclick=()=>{ui.result.classList.add("hidden");resetLevel(state.levelIndex);};ui.next.onclick=()=>{if(!state.resultWon)return;ui.result.classList.add("hidden");if(state.levelIndex<LEVELS.length-1)resetLevel(state.levelIndex+1);else openLevels();};ui.levelModal.addEventListener("click",e=>{if(e.target===ui.levelModal)closeLevels();});ui.helpModal.addEventListener("click",e=>{if(e.target===ui.helpModal)closeInfoModal(ui.helpModal);});ui.settingsModal.addEventListener("click",e=>{if(e.target===ui.settingsModal)closeInfoModal(ui.settingsModal);});ui.statsModal.addEventListener("click",e=>{if(e.target===ui.statsModal)closeInfoModal(ui.statsModal);});ui.feedbackModal.addEventListener("click",e=>{if(e.target===ui.feedbackModal)closeInfoModal(ui.feedbackModal);});
+  let resizeRAF=0;
+  window.addEventListener("resize",()=>{cancelAnimationFrame(resizeRAF);resizeRAF=requestAnimationFrame(resizeCanvas);},{passive:true});
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){flushPlayTime();if(state.started&&!state.paused&&!state.finished){state.autoPaused=true;togglePause(true);setStatus("Игра автоматически поставлена на паузу, пока вкладка неактивна.");}}else{lastPlayFlush=Date.now();}
+  });
+  window.addEventListener("pagehide",flushPlayTime,{passive:true});
 
-  function renderLoop(){
-    draw();
+  function renderLoop(now){
+    const frameInterval=state.save.reducedMotion?120:33;
+    if(!document.hidden&&now-state.lastRender>=frameInterval){state.lastRender=now;draw();}
     requestAnimationFrame(renderLoop);
   }
 
+  state.stats.sessions++;state.stats.lastVersion=APP_VERSION;state.stats.lastSeen=new Date().toISOString();persistStats();
+  $("versionBadge").textContent=`v${APP_VERSION}`;
   resetLevel(0);
+  syncSettingsUI();
+  resizeCanvas();
   const continueLevel=Math.max(0,Math.min(LEVELS.length-1,state.save.unlocked-1));
   $("startBtn").textContent=continueLevel>0 ? `Продолжить — уровень ${continueLevel+1}` : "Начать восстановление";
   requestAnimationFrame(renderLoop);

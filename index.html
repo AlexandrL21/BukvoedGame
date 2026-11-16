@@ -12,12 +12,14 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">Б</div>
-        <div><h1>Буквоед</h1><p>Восстанови слова волшебной библиотеки</p></div>
+        <div><div class="brand-title-row"><h1>Буквоед</h1><span class="release-badge" id="versionBadge">v1.0.0</span></div><p>Восстанови слова волшебной библиотеки</p></div>
       </div>
       <div class="top-actions">
-        <button class="icon-btn" id="levelsBtn">☰ Уровни</button>
-        <button class="icon-btn" id="soundBtn">🔊</button>
-        <button class="icon-btn" id="pauseBtn">Ⅱ</button>
+        <button class="icon-btn" id="menuBtn" title="Главное меню">⌂ Меню</button>
+        <button class="icon-btn" id="levelsBtn" title="Выбор уровня">☰ Уровни</button>
+        <button class="icon-btn compact-icon" id="helpBtn" title="Как играть">?</button>
+        <button class="icon-btn compact-icon" id="soundBtn" title="Звук">🔊</button>
+        <button class="icon-btn compact-icon" id="pauseBtn" title="Пауза">Ⅱ</button>
       </div>
     </header>
 
@@ -41,7 +43,16 @@
         <div class="board-wrap">
           <canvas id="gameCanvas" width="720" height="720"></canvas>
           <div class="center-overlay hidden" id="pauseOverlay">
-            <div class="overlay-card compact"><div class="overlay-icon">⏸</div><h2>Пауза</h2><p>Нажми «Продолжить», когда будешь готов.</p><button class="primary-btn" id="resumeBtn">Продолжить</button></div>
+            <div class="overlay-card compact pause-card">
+              <div class="overlay-icon">⏸</div>
+              <h2>Пауза</h2>
+              <p>Игра остановлена. Можно продолжить, начать уровень заново или вернуться в меню.</p>
+              <div class="pause-actions">
+                <button class="primary-btn" id="resumeBtn">Продолжить</button>
+                <button class="secondary-btn" id="restartBtn">Начать уровень заново</button>
+                <button class="ghost-btn" id="pauseMenuBtn">В главное меню</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -54,21 +65,31 @@
       </section>
 
       <aside class="side-card">
-        <section class="stats-panel">
-          <div class="stat"><span class="stat-label">Жизни</span><strong id="livesDisplay">❤❤❤</strong></div>
-          <div class="stat"><span class="stat-label">Очки</span><strong id="scoreDisplay">0</strong></div>
-          <div class="stat"><span class="stat-label">Ошибки</span><strong id="errorsDisplay">0</strong></div>
+        <section class="stats-panel" aria-label="Игровые счётчики">
+          <div class="stat" id="livesStat"><span class="stat-icon">❤</span><span class="stat-label">Жизни</span><strong id="livesDisplay">❤❤❤</strong></div>
+          <div class="stat" id="scoreStat"><span class="stat-icon">★</span><span class="stat-label">Очки</span><strong id="scoreDisplay">0</strong></div>
+          <div class="stat" id="errorsStat"><span class="stat-icon">!</span><span class="stat-label">Ошибки</span><strong id="errorsDisplay">0</strong></div>
+          <div class="stat" id="lettersStat"><span class="stat-icon">А</span><span class="stat-label">Буквы</span><strong id="lettersDisplay">0/3</strong></div>
         </section>
 
-        <section><div class="section-title">Способности</div><div class="power-list">
-          <button class="power-btn" id="hintBtn"><span class="power-icon">💡</span><span><strong>Подсказка</strong><small id="hintText">1 раз за уровень</small></span></button>
-          <div class="power-btn passive" id="eraserCard"><span class="power-icon">🧽</span><span><strong>Ластик</strong><small id="eraserText">Готов спасти от ошибки</small></span></div>
-        </div></section>
+        <section class="inventory-panel">
+          <div class="section-head"><div class="section-title">Рюкзак Буквоеда</div><span class="section-badge">способности</span></div>
+          <div class="power-list">
+            <button class="power-btn" id="hintBtn"><span class="power-icon">💡</span><span class="power-copy"><strong>Подсказка</strong><small id="hintText">1 раз за уровень</small></span><span class="item-count" id="hintCount">×1</span></button>
+            <div class="power-btn passive" id="eraserCard"><span class="power-icon">🧽</span><span class="power-copy"><strong>Ластик</strong><small id="eraserText">Готов спасти от ошибки</small></span><span class="item-count" id="eraserCount">×1</span></div>
+          </div>
+        </section>
 
         <section class="progress-panel"><div class="section-title">Восстановление библиотеки</div><div class="progress-track"><div id="progressFill" class="progress-fill"></div></div><div class="progress-meta"><span id="progressText">0 из 20 уровней</span><span id="zoneProgress">Зал 1/4</span></div></section>
 
-        <section class="rules-panel"><div class="section-title">Как играть</div><p>Управляй Буквоедом стрелками или WASD и собирай буквы строго по порядку.</p><div class="legend"><span><i class="legend-dot false"></i> карточки с буквами</span><span><i class="legend-dot obstacle"></i> препятствия</span><span><i class="legend-dot correct"></i> подсветка при подсказке</span></div></section>
-        <div class="tip" id="statusText">Найди первую букву слова.</div>
+        <section class="quick-panel">
+          <div class="section-title">Быстрые действия</div>
+          <div class="quick-actions">
+            <button class="mini-action" id="sideHelpBtn">? Как играть</button>
+            <button class="mini-action" id="settingsBtn">⚙ Настройки</button>
+          </div>
+        </section>
+        <div class="tip" id="statusText"><span class="tip-dot"></span><span id="statusCopy">Найди первую букву слова.</span></div>
       </aside>
     </main>
   </div>
@@ -92,16 +113,94 @@
         </div>
       </div>
 
-      <div class="story-actions">
+      <div class="story-actions main-menu-actions">
         <button class="primary-btn" id="startBtn">Начать восстановление</button>
         <button class="secondary-btn" id="introLevelsBtn">Выбрать уровень</button>
+        <button class="ghost-btn" id="introHelpBtn">Как играть</button>
+        <button class="ghost-btn" id="introSettingsBtn">Настройки</button>
+        <button class="ghost-btn" id="introStatsBtn">Статистика</button>
+        <button class="ghost-btn" id="introFeedbackBtn">Оставить отзыв</button>
       </div>
+      <div class="release-line"><span>Релизная версия <strong>1.0.1</strong></span><span>GitHub Pages</span></div>
     </div>
   </div>
 
-  <div class="modal-backdrop hidden" id="levelModal"><div class="modal levels-modal"><div class="modal-head"><div><div class="eyebrow">Карта библиотеки</div><h2>Выбор уровня</h2></div><button class="close-btn" id="closeLevelsBtn">×</button></div><div class="level-grid" id="levelGrid"></div></div></div>
+  <div class="modal-backdrop hidden" id="levelModal"><div class="modal levels-modal"><div class="modal-head"><div><div class="eyebrow">Карта библиотеки</div><h2>Выбор уровня</h2></div><button class="close-btn" id="closeLevelsBtn">×</button></div><div class="level-grid" id="levelGrid"></div><p class="modal-footnote">Пройденные уровни отмечены звёздами. Следующий уровень открывается только после победы.</p></div></div>
 
-  <div class="modal-backdrop hidden" id="resultModal"><div class="modal result-modal"><div class="result-emoji" id="resultEmoji">✨</div><div class="eyebrow" id="resultEyebrow">Слово восстановлено</div><h2 id="resultTitle">Отлично!</h2><div class="result-word" id="resultWord"></div><div class="result-stars" id="resultStars">★★★</div><p id="resultText"></p><div class="result-actions"><button class="secondary-btn" id="replayBtn">Повторить</button><button class="primary-btn" id="nextLevelBtn">Следующий уровень</button></div></div></div>
+  <div class="modal-backdrop hidden" id="resultModal">
+    <div class="modal result-modal">
+      <div class="result-emoji" id="resultEmoji">✨</div>
+      <div class="eyebrow" id="resultEyebrow">Слово восстановлено</div>
+      <h2 id="resultTitle">Отлично!</h2>
+      <div class="result-word" id="resultWord"></div>
+      <div class="result-stars" id="resultStars">★★★</div>
+      <div class="result-summary">
+        <div><span>Очки</span><strong id="resultScore">0</strong></div>
+        <div><span>Ошибки</span><strong id="resultErrors">0</strong></div>
+        <div><span>Жизни</span><strong id="resultLives">3</strong></div>
+      </div>
+      <p id="resultText"></p>
+      <div class="result-actions"><button class="secondary-btn" id="replayBtn">Повторить</button><button class="primary-btn" id="nextLevelBtn">Следующий уровень</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="helpModal">
+    <div class="modal info-modal">
+      <div class="modal-head"><div><div class="eyebrow">Справка</div><h2>Как играть</h2></div><button class="close-btn" id="closeHelpBtn">×</button></div>
+      <div class="help-grid">
+        <div class="help-card"><span class="help-icon">⌨️</span><div><strong>Управление</strong><p>Стрелки или WASD. Нельзя мгновенно развернуться в противоположную сторону.</p></div></div>
+        <div class="help-card"><span class="help-icon">🔤</span><div><strong>Собирай по порядку</strong><p>Смотри на определение и собирай буквы ответа слева направо.</p></div></div>
+        <div class="help-card"><span class="help-icon">❤</span><div><strong>Три жизни</strong><p>Столкновения и неправильные буквы отнимают жизнь. Ластик один раз спасает от ошибки.</p></div></div>
+        <div class="help-card"><span class="help-icon">💡</span><div><strong>Подсказка</strong><p>Один раз за уровень можно подсветить нужную букву на несколько секунд.</p></div></div>
+      </div>
+      <div class="key-guide"><kbd>W</kbd><div><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div><span>или</span><kbd>↑</kbd><div><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></div></div>
+      <button class="primary-btn wide-btn" id="helpOkBtn">Понятно</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal settings-modal">
+      <div class="modal-head"><div><div class="eyebrow">Параметры</div><h2>Настройки</h2></div><button class="close-btn" id="closeSettingsBtn">×</button></div>
+      <div class="settings-list">
+        <button class="setting-row" id="settingsSoundBtn"><span><strong>Звуки</strong><small>Сигналы правильных букв, ошибок и победы</small></span><span class="toggle-pill" id="soundToggleText">Вкл.</span></button>
+        <button class="setting-row" id="motionBtn"><span><strong>Анимации интерфейса</strong><small>Плавные окна, пульсация счётчиков и кнопок</small></span><span class="toggle-pill" id="motionToggleText">Вкл.</span></button>
+      </div>
+      <p class="settings-note">Настройки сохраняются в браузере на этом устройстве.</p>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop hidden" id="statsModal">
+    <div class="modal monitoring-modal">
+      <div class="modal-head"><div><div class="eyebrow">Мониторинг</div><h2>Статистика игры</h2></div><button class="close-btn" id="closeStatsBtn">×</button></div>
+      <p class="monitoring-note">Показатели сохраняются локально только в этом браузере и используются для проверки баланса релизной версии.</p>
+      <div class="monitoring-grid">
+        <div class="monitor-card"><span>Запуски</span><strong id="mSessions">0</strong></div>
+        <div class="monitor-card"><span>Начато уровней</span><strong id="mStarts">0</strong></div>
+        <div class="monitor-card"><span>Победы</span><strong id="mWins">0</strong></div>
+        <div class="monitor-card"><span>Поражения</span><strong id="mLosses">0</strong></div>
+        <div class="monitor-card"><span>Успешность</span><strong id="mWinRate">0%</strong></div>
+        <div class="monitor-card"><span>Ошибки</span><strong id="mErrors">0</strong></div>
+        <div class="monitor-card"><span>Подсказки</span><strong id="mHints">0</strong></div>
+        <div class="monitor-card"><span>Ластик</span><strong id="mErasers">0</strong></div>
+        <div class="monitor-card wide"><span>Игровое время</span><strong id="mPlayTime">0 мин</strong></div>
+      </div>
+      <div class="monitoring-footer"><span id="mVersion">Версия 1.0.0</span><button class="ghost-btn" id="resetStatsBtn">Сбросить локальную статистику</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="feedbackModal">
+    <div class="modal feedback-modal">
+      <div class="modal-head"><div><div class="eyebrow">Обратная связь</div><h2>Оставить отзыв</h2></div><button class="close-btn" id="closeFeedbackBtn">×</button></div>
+      <p class="monitoring-note">Отзыв не отправляется на сторонний сервер автоматически. Игра подготовит текст, который можно передать разработчику через GitHub Issues.</p>
+      <label class="feedback-field"><span>Категория</span><select id="feedbackCategory"><option>Общее впечатление</option><option>Ошибка или баг</option><option>Сложность уровня</option><option>Управление</option><option>Интерфейс</option><option>Идея для улучшения</option></select></label>
+      <div class="feedback-field"><span>Оценка</span><div class="rating-row" id="ratingRow"><button data-rating="1">1</button><button data-rating="2">2</button><button data-rating="3">3</button><button data-rating="4">4</button><button data-rating="5">5</button></div></div>
+      <label class="feedback-field"><span>Комментарий</span><textarea id="feedbackText" maxlength="1000" placeholder="Что понравилось, что было непонятно или где возникла ошибка?"></textarea></label>
+      <div class="feedback-meta"><span>Версия: <strong>1.0.1</strong></span><span id="feedbackDevice">Устройство: —</span></div>
+      <div class="feedback-actions"><button class="secondary-btn" id="copyFeedbackBtn">Скопировать отзыв</button><button class="primary-btn" id="githubFeedbackBtn">Открыть GitHub Issues</button></div>
+      <p class="feedback-status" id="feedbackStatus"></p>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
   <script src="game.js"></script>
