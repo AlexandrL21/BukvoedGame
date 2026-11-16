@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const APP_VERSION = "1.0.1";
+  const APP_VERSION = "1.0.2";
   const REPO_URL = "https://github.com/alexandrl21/BukvoedGame";
   const STATS_KEY = "bukvoed-stats-v1";
 
